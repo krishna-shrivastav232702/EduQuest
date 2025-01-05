@@ -4,6 +4,8 @@ import dotenv from "dotenv"
 import bodyParser from "body-parser"
 import { connectDb } from "./db/connectDb.js"
 import authRoutes from "./routes/auth.routes.js"
+import testRoutes from "./routes/test.routes.js"
+import pdfRoutes from "./routes/upload.route.js"
 
 
 
@@ -17,14 +19,12 @@ app.use(bodyParser.json());
 
 const port = process.env.PORT;
 
+await connectDb();
 
 app.use("/auth",authRoutes);
 app.use("/tests",testRoutes);
-app.use("/notifications",reminderRoutes);
 app.use("/pdf",pdfRoutes);
 
-
-
-
-connectDb();
-
+app.listen(port, ()=> {
+    console.log(`App is listening at port: ${port}`);
+});
