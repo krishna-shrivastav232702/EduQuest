@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                        String            @id @default(cuid())
+  name                      String
+  email                     String            @unique
+  password                  String
+  isVerified               Boolean           @default(false)
+  city                      String?
+  state                     String?
+  verificationToken         String?
+  verificationTokenExpiresAt DateTime?
+  reminders                 Reminder[]        @relation("UserReminders")
+  testPerformance          TestPerformance[] @relation("UserTestPerformance")
+  tests                     Test[]            @relation("UserTests")
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+}
+
+model Reminder {
+  id        String   @id @default(cuid())
+  userId    String
+  testDate  DateTime
+  emailSent Boolean  @default(false)
+  user      User     @relation("UserReminders", fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Test {
+  id                String            @id @default(cuid())
+  userId           String
+  difficulty       Difficulty
+  questions        Question[]        @relation("TestQuestions")
+  createdAt        DateTime          @default(now())
+  user             User              @relation("UserTests", fields: [userId], references: [id])
+  testPerformance  TestPerformance[]
+
+  @@index([userId])
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  questionText  String
+  options       String[]
+  correctAnswer String
+  userAnswer    String?
+  testId        String
+  test          Test     @relation("TestQuestions", fields: [testId], references: [id])
+
+  @@index([testId])
+}
+
+model TestPerformance {
+  id        String   @id @default(cuid())
+  userId    String
+  testId    String
+  score     Int      @default(0)
+  date      DateTime @default(now())
+  user      User     @relation("UserTestPerformance", fields: [userId], references: [id])
+  test      Test     @relation(fields: [testId], references: [id])
+
+  @@index([userId, testId])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}

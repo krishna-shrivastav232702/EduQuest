@@ -1,9 +1,10 @@
-import User from "../models/auth.model.js"
 import bcryptjs from "bcryptjs"
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import { sendVerificationEmail } from "../utils/sendVerificationEmail.js";
 import {generateVerificationCode} from "../utils/generateVerificationCode.js"
 import { Request,Response } from "express";
+import { prismaClient } from "../index.js";
+
 
 export const signup = async(req:Request,res:Response):Promise<void>=>{
     const {name,email,password,city,state}=req.body;
@@ -12,7 +13,7 @@ export const signup = async(req:Request,res:Response):Promise<void>=>{
             res.status(400).json({message:"Enter all fields"});
             return ;
         }
-        const userAlreadyExists = await User.findOne({email});
+        const userAlreadyExists = await prismaClient.user.findFirst({where:{email}});
         if(userAlreadyExists){
             res.status(409).json({message:"user already exists"});
             return ;
@@ -20,7 +21,8 @@ export const signup = async(req:Request,res:Response):Promise<void>=>{
         const hashedPassword = await bcryptjs.hash(password,10);
         const verificationToken = generateVerificationCode();
 
-        const user = new User({
+        const user = await prismaClient.user.create({
+            data:{
             email,
             name,
             password:hashedPassword,
@@ -28,16 +30,15 @@ export const signup = async(req:Request,res:Response):Promise<void>=>{
             state,
             verificationToken,
             verificationTokenExpiresAt: new Date(Date.now()+3*60*60*1000),
-        })
-        await user.save();
+        }})
 
-        const token = generateTokenAndSetCookie(res,user._id.toString());
+        const token = generateTokenAndSetCookie(res,user.id.toString());
         const result = await sendVerificationEmail(user.name, user.email, verificationToken);
         console.log(`Email sent successfully : ${result}`);
 
         res.status(201).json({
             message: "User Created Successfully",
-            user: { name: user.name, email: user.email, city: user.city, state: user.state, _id: user._id },
+            user: { name: user.name, email: user.email, city: user.city, state: user.state, _id: user.id },
             token
         });
 
@@ -51,7 +52,7 @@ export const signup = async(req:Request,res:Response):Promise<void>=>{
 export const login = async(req:Request,res:Response)=>{
     const { email, password } = req.body;
     try {
-        const user = await User.findOne({ email });
+        const user = await prismaClient.user.findFirst({ where:{email} });
         if (!user) {
             res.status(404).json({ message: "User doesnt exists" });
             return;
@@ -63,15 +64,13 @@ export const login = async(req:Request,res:Response)=>{
             return;
         }
 
-        const token = generateTokenAndSetCookie(res, user._id.toString());
+        const token = generateTokenAndSetCookie(res, user.id.toString());
 
-        const userObject = user.toObject();
-        await user.save();
         res.status(200).json({
             success: true,
             message: "Logged in successfully",
             user: {
-                ...userObject,
+                ...user,
                 password: undefined,
             },
             token,
