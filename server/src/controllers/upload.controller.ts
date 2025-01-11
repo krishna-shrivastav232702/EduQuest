@@ -32,10 +32,35 @@ export const geminiIntegration = async(req:Request,res:Response)=>{
         if(!result){
             res.status(400).json({message:"Something went wrong in api response"});
         }
-        res.status(200).json({result});
+        const ans = result.response.candidates?.[0].content.parts?.[0].text
+        const questions = await processingQuestions(ans);
+        res.status(200).json({questions});
 
     } catch (error) {
         console.error(error);
         res.status(500).json({message:"Internal Server Error"});
     }
+}
+
+
+const processingQuestions = async(ans:string | undefined) =>{
+    const questionBlocks = ans?.split("Question:");
+    const questions =  questionBlocks?.slice(1).map((block)=>{
+        const rawquestion = block.match(/^(.*?)(?=\n- Option A)/s)?.[1]?.trim() || "";
+        const question = rawquestion
+                            .replace(/\*\*/g,"")
+                            .replace(/\n+/g," ")
+                            .trim();
+        const options = (block.match(/- (.*?)\n/g) || []).map(option => option.replace('- ',"").trim());
+        const answer = block.match(/Answer:\s*([A-D])/)?.[1]?.trim() || "";
+        const explanation = block.match(/Explanation:\s*(.*)/)?.[1]?.trim() || "";
+        return {
+            question,
+            options,
+            answer,
+            explanation,
+        };
+    });
+
+    return questions;
 }
