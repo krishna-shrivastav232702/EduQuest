@@ -117,7 +117,6 @@ def extract_text():
         section_text = extract_section_text(pdf_stream, section_number, section_type)
 
         if section_text:
-            print(section_text)
             return jsonify({"status": "success", "section_text": section_text}), 200
         else:
             return jsonify({"status": "error", "message": "Section not found"}), 404

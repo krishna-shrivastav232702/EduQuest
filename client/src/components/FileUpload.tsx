@@ -80,12 +80,22 @@ const FileUpload:React.FC = ()=>{
             section_type:"Chapter",
             section_number:chapter  //it should be Ten not 10
         });
-
-        setExtractedText(extractionResponse.data.section_text);
+        const text = extractionResponse.data.section_text;
+        setExtractedText(text);
+        await sendingTextToGemini(text);
     } catch (error) {
         console.error("error extracting text:",error);
         throw new Error("Failed to extract text from PDF");        
     }
+    }
+
+    const sendingTextToGemini = async(text:string)=>{
+        try {
+            const response = await axios.post('http://localhost:7008/pdf/gemini',{text});
+            console.log(response.data.result.response.candidates[0].content.parts[0].text);
+        } catch (error) {
+            console.error("error from the gemini model");
+        }
     }
 
 
