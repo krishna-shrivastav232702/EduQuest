@@ -1,12 +1,13 @@
 import { Request,Response } from "express"
 import {GoogleGenerativeAI} from "@google/generative-ai"
 import dotenv from "dotenv"
+import { prismaClient } from "../index.js";
 
 dotenv.config();
 
 const apikey = process.env.GEMINI_API_KEY || "";
 
-export const geminiIntegration = async(req:Request,res:Response)=>{
+export const geminiIntegrationToSavePdf = async(req:Request,res:Response)=>{
     try {
         const {text}=req.body;
         const genAI = new GoogleGenerativeAI(apikey);
@@ -34,6 +35,12 @@ export const geminiIntegration = async(req:Request,res:Response)=>{
         }
         const ans = result.response.candidates?.[0].content.parts?.[0].text
         const questions = await processingQuestions(ans);
+
+        if(!questions || questions.length === 0){
+            res.status(400).json({message:"No questions were generated"});
+            return;
+        }
+
         res.status(200).json({questions});
 
     } catch (error) {

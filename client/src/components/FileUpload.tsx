@@ -9,6 +9,12 @@ interface FileData{
     fileSize:number;
 }
 
+interface Question{
+    questionText:string;
+    options:string[];
+    correctAnswer:string;
+    explanation:string;
+}
 
 
 interface PresignedUrlResponse{
@@ -21,6 +27,8 @@ const FileUpload:React.FC = ()=>{
     const [file,setFile] = useState<File | null>(null);
     const [chapter,setChapter]=useState<string>("");
     const [extractedText,setExtractedText]=useState<string>("");
+    const [testId,setTestId] = useState<string | null>(null);
+    const [questions,setQuestions] = useState<Question[]>([]);
 
     const handleFileChange = (e:React.ChangeEvent<HTMLInputElement>)=>{
         if(e.target.files){
@@ -82,22 +90,54 @@ const FileUpload:React.FC = ()=>{
         });
         const text = extractionResponse.data.section_text;
         setExtractedText(text);
-        await sendingTextToGemini(text);
+        console.log("Text extracted");
     } catch (error) {
         console.error("error extracting text:",error);
         throw new Error("Failed to extract text from PDF");        
     }
     }
 
-    const sendingTextToGemini = async(text:string)=>{
+    // const sendingTextToGeminiToGeneratePdf = async(text:string)=>{
+    //     try {
+    //         const response = await axios.post('http://localhost:7008/pdf/gemini',{text});
+    //         console.log(response.data.result.response.candidates[0].content.parts[0].text);
+    //     } catch (error) {
+    //         console.error("error from the gemini model");
+    //     }
+    // }
+
+    const sendingTextToGeminiToGenerateTest = async(text:string,userId:string)=>{
         try {
-            const response = await axios.post('http://localhost:7008/pdf/gemini',{text});
-            console.log(response.data.result.response.candidates[0].content.parts[0].text);
+            const response = await axios.post('http://localhost:7008/tests/generate',{text,userId});
+            console.log(response.data);
+            setTestId(response.data.testId); //this will give testId
         } catch (error) {
-            console.error("error from the gemini model");
+            console.error("Error generating test");
         }
     }
 
+    const findingTest = async(testId:string)=>{
+        try {
+            const response = await axios.get(`http://localhost:7008/tests/${testId}`);
+            console.log("questions:",response.data);
+            setQuestions(response.data.testquestions);
+        } catch (error) {
+            console.error("error finding test");
+        }
+    }
+
+    const handleGenerateTest = async()=>{
+        if(extractedText && chapter){
+            const userId = "cm5rre9bt0000klf09fb28ujc";
+            await sendingTextToGeminiToGenerateTest(extractedText, userId);
+        }
+    }
+    
+    const handleFetchTest = async () => {
+        if (testId) {
+            await findingTest(testId);
+        }
+    };
 
     return(
         <div className="p-4 max-w-2xl mx-auto">
@@ -127,6 +167,19 @@ const FileUpload:React.FC = ()=>{
                 />
             </div>
 
+            <button
+                    onClick={handleGenerateTest}
+                    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-4"
+                    >
+                    Generate Test
+            </button>
+            <button
+                    onClick={handleFetchTest}
+                    className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-4"
+                >
+                    Fetch Test
+            </button>
+
             <button 
                 onClick={handleUploadClick}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
@@ -136,14 +189,25 @@ const FileUpload:React.FC = ()=>{
 
            
 
-            {extractedText && (
-                <div className="mt-4">
-                    <h3 className="font-medium mb-2">Extracted Text:</h3>
-                    <div className="border p-4 rounded bg-gray-50">
-                        {extractedText}
+            {questions.length > 0 && (
+                    <div className="mt-4">
+                        <h3 className="font-medium mb-2">Generated Questions:</h3>
+                        <div className="border p-4 rounded bg-gray-50">
+                            {questions.map((q, index) => (
+                                <div key={index} className="mb-4">
+                                    <p className="font-semibold">{q.questionText}</p>
+                                    <ul>
+                                        {q.options.map((option, idx) => (
+                                            <li key={idx}>{option}</li>
+                                        ))}
+                                    </ul>
+                                    <p className="text-sm text-gray-500">Correct Answer: {q.correctAnswer}</p>
+                                    <p className="text-sm text-gray-500">Explanation: {q.explanation}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
         </div>
     </div>
     )

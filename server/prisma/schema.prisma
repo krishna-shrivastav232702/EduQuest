@@ -39,10 +39,10 @@ model Reminder {
 model Test {
   id                String            @id @default(cuid())
   userId           String
-  difficulty       Difficulty
   questions        Question[]        @relation("TestQuestions")
   createdAt        DateTime          @default(now())
   user             User              @relation("UserTests", fields: [userId], references: [id])
+  status           String             @default("pending")
   testPerformance  TestPerformance[]
 
   @@index([userId])
@@ -55,6 +55,8 @@ model Question {
   correctAnswer String
   userAnswer    String?
   testId        String
+  explanation   String?
+  status        String    @default("pending")
   test          Test     @relation("TestQuestions", fields: [testId], references: [id])
 
   @@index([testId])
@@ -85,8 +87,3 @@ model File {
   @@index([userId])
 }
 
-enum Difficulty {
-  EASY
-  MEDIUM
-  HARD
-}
