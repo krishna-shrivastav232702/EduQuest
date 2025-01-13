@@ -103,5 +103,27 @@ export const logout = async(req:Request,res:Response)=>{
 }
 
 export const profile = async(req:Request,res:Response)=>{
-    
+    const {userId} = req.params;
+    try{
+        const user = await prismaClient.user.findFirst(
+            {
+                where:{id:userId},
+                select:{
+                    id:true,
+                    name:true,
+                    email:true,
+                    reminders:true,
+                    tests:true,
+                    testPerformance:true,
+                    files:true
+                }
+            });
+        if(!user){
+            res.status(404).json({message:"User Doesnt exist"});
+        }
+        
+
+    }catch(error){
+
+    }
 }

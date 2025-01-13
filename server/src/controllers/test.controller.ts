@@ -95,16 +95,76 @@ const processingQuestions = async(ans:string | undefined) =>{
     return questions;
 }
 
-export const startTest = async(req:Request,res:Response)=>{
 
-}
 
 export const submitTest = async(req:Request,res:Response)=>{
+    try {
+        const {answers} = req.body;
+        const {userId,testId}=req.params;
+        if(!testId || !answers){
+            res.status(404).json({message:"Test Id and answers are required"});
+        }
 
+        const questions = await prismaClient.question.findMany({where:{testId}});
+
+        if(!questions || questions.length === 0){
+            res.status(404).json({message:"Questions not found"});
+        }
+
+        let score = 0;
+        const questionUpdates = questions.map((question)=>{
+            const userAnswer = answers[question.id];
+            const isCorrect = userAnswer === question.correctAnswer;
+            if(isCorrect) score++;
+            return prismaClient.question.update({
+                where:{id:question.id},
+                data:{
+                    userAnswer,
+                    status:isCorrect ? "correct" : "incorrect",
+                }
+            })
+        })
+
+        await Promise.all(questionUpdates);
+
+        await prismaClient.testPerformance.create({
+            data:{
+                userId,
+                testId,
+                score,
+            }
+        });
+
+        res.status(200).json({ message: "Test submitted successfully", score });
+
+    } catch (error) {
+        console.error("Error submitting test:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 }
 
 export const testResult = async(req:Request,res:Response)=>{
+    try {
+        const {testId}=req.params;
+        if(!testId){
+            res.status(400).json({message:"Test id is required"});
+        }
+        const test = await prismaClient.test.findUnique({
+            where:{id:testId},
+            include:{
+                questions:true,
+                testPerformance:true,
+            }
+        })
+        if (!test) {
+            res.status(404).json({ message: "Test not found" });
     
+        }
+        res.status(200).json({ message: "Test result fetched", test });
+    } catch (error) {
+        console.error("Error fetching test result:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
 }
 
 export const findTestQuestions = async(req:Request,res:Response)=>{
