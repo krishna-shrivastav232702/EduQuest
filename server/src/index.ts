@@ -5,9 +5,11 @@ import bodyParser from "body-parser"
 import authRoutes from "./routes/auth.routes.js"
 import testRoutes from "./routes/test.routes.js"
 import pdfRoutes from "./routes/upload.route.js";
+import reminderRoutes from "./routes/reminder.routes.js"
 import morgan from "morgan"
 import { Express } from "express"
 import { PrismaClient } from "@prisma/client"
+import "./utils/cron.js"
 
 
 dotenv.config({path:'./.env'});
@@ -30,6 +32,7 @@ export const prismaClient = new PrismaClient({});
 app.use("/auth",authRoutes);
 app.use("/tests",testRoutes);
 app.use("/pdf",pdfRoutes);
+app.use("/reminder",reminderRoutes);
 
 app.listen(port, ()=> {
     console.log(`App is listening at port: ${port} and in ${envMode} mode`);
