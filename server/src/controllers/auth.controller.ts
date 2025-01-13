@@ -127,3 +127,24 @@ export const profile = async(req:Request,res:Response)=>{
 
     }
 }
+
+export const verifyEmail = async(req:Request,res:Response)=>{
+    const {userId} = req.params;
+    try {
+        const user = await prismaClient.user.update(
+            {
+                where:{id:userId},
+                data:{
+                    isVerified:true
+                }        
+            });
+        if(!user){
+            res.status(404).json({message:"User doesnt exist"});
+        }
+        res.status(200).json({message:"User Verified Successfully",user});
+
+    } catch (error) {
+        console.error("Internal Server Error");
+        res.status(500).json({message:"Internal server error while updating user"});
+    }
+}

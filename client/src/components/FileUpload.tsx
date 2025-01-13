@@ -184,10 +184,10 @@ const FileUpload:React.FC = ()=>{
                 onClick={handleUploadClick}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
             >
-             Upload and Extract
+                Upload and Extract
             </button>
 
-           
+            
 
             {questions.length > 0 && (
                     <div className="mt-4">
