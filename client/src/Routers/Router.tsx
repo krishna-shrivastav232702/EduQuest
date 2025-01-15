@@ -3,8 +3,6 @@ import App from "../App"
 import About from "../components/About"
 import FileUpload from "../components/FileUpload"
 import Pricing from "../components/Pricing"
-import Login from "../scenes/Authentication/Login"
-import Signup from "../scenes/Authentication/Signup"
 import Dashboard from "../scenes/Dashboard/Dashboard"
 import DashboardLayout from "../scenes/Dashboard/DashboardLayout"
 import Home from "../scenes/Home/Home"
@@ -13,44 +11,36 @@ import Test from "../scenes/Test/Test"
 
 const Router = createBrowserRouter([
     {
-        path:"/",
-        element:<App/>,
-        children:[
+        path: "/",
+        element: <App />,
+        children: [
             {
-                path:'/',
-                element:<Home/>
+                path: '/',
+                element: <Home />
             },
             {
-                path:'/signup',
-                element:<Signup/>
+                path: "/about",
+                element: <About />
             },
             {
-                path:'/login',
-                element:<Login/>
+                path: "/pricing",
+                element: <Pricing />
             },
             {
-                path:"/about",
-                element:<About/>
+                path: "/test",
+                element: <Test />
             },
             {
-                path:"/pricing",
-                element:<Pricing/>
-            },
-            {
-                path:"/test",
-                element:<Test/>
-            },
-            {
-                path:"/dashboard",
-                element:<DashboardLayout/>,
-                children:[
+                path: "/dashboard",
+                element: <DashboardLayout />,
+                children: [
                     {
-                        path:'/dashboard/home',
-                        element:<Dashboard/>
+                        path: '/dashboard/home',
+                        element: <Dashboard />
                     },
                     {
-                        path:"/dashboard/uploadPdf",
-                        element:<FileUpload/>
+                        path: "/dashboard/uploadPdf",
+                        element: <FileUpload />
                     },
                 ]
             }

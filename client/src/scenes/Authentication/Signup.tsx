@@ -35,7 +35,7 @@ const Signup: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-Blue/70 via-Blue/80 to-Blue/90">
+        <div className="min-h-screen flex items-center justify-center ">
             <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 space-y-6 border border-gray-200">
                 <h1 className="text-3xl font-extrabold text-center text-gray-800">Create an Account</h1>
                 {error && <p className="text-center text-red-500">{error}</p>}
@@ -48,27 +48,18 @@ const Signup: React.FC = () => {
                                 type={field === "Password" ? "password" : "text"}
                                 name={field.toLowerCase()}
                                 placeholder={`Enter your ${field.toLowerCase()}`}
-                                className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                                className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition"
                             />
                         </div>
                     ))}
 
                     <button
                         type="submit"
-                        className=" ml-32 w-1/3 bg-black text-white font-bold py-3  rounded-lg shadow-md transition transform hover:scale-95"
+                        className=" ml-32 w-1/3 bg-Blue/90 hover:bg-Blue/80 text-white font-bold py-3  rounded-lg shadow-md transition transform hover:scale-95"
                     >
                         Register
                     </button>
                 </form>
-
-                <div className="text-center">
-                    <p className="text-gray-600">
-                        Already have an account?{" "}
-                        <Link to="/login" className="text-blue-500 hover:underline">
-                            Login here
-                        </Link>
-                    </p>
-                </div>
             </div>
         </div>
     );
