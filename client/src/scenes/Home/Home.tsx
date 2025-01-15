@@ -116,7 +116,7 @@ const Home = () => {
                 </motion.div>
             </motion.div>
             {/* next page  starts */}
-            <motion.div initial={{ opacity: 0, translateY: 50 }} transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }} whileInView={{ opacity: 1, translateY: 0 }} className="max-w-full  h-[850px] mt-[200px] flex justify-around gap-20">
+            <motion.div initial={{ opacity: 0, translateY: 50 }} transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }} whileInView={{ opacity: 1, translateY: 0 }} className="max-w-full  h-[850px] mt-[200px] flex justify-around gap-20 mb-20">
                 <div className="bg-White  w-1/2 flex  items-center justify-center ">
                     <div className=" min-w-[500px]  ">
                         <div className="min-w-2xl p-8 ">
