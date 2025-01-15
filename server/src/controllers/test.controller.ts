@@ -36,7 +36,7 @@ export const generateTest = async(req:Request,res:Response)=>{
             - Option C
             - Option D
             Answer: [Correct Answer]
-            Explanation: [Explanation of the correct answer]`
+            Explanation: [Provide a direct and concise explanation for why the correct answer is correct. Focus only on the scientific principles, definitions, or logical reasoning relevant to the answer. Do not reference the text explicitly or use phrases like "the text states," "the text defines," or "as mentioned in the text."]`
         });
 
         const inputText = `

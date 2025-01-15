@@ -25,7 +25,7 @@ const Navbar: FC = () => {
             link: "About", path: "/about"
         },
         {
-            link: "Dashboard", path: "/dashboard",
+            link: "Dashboard", path: "/dashboard/home",
         },
         {
             link: "Pricing", path: "/pricing",

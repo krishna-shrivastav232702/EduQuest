@@ -7,6 +7,8 @@ import Dashboard from "../scenes/Dashboard/Dashboard"
 import DashboardLayout from "../scenes/Dashboard/DashboardLayout"
 import Home from "../scenes/Home/Home"
 import Test from "../scenes/Test/Test"
+import Reminder from "@/components/Reminder"
+import Performance from "@/scenes/Dashboard/Performance"
 
 
 const Router = createBrowserRouter([
@@ -42,6 +44,14 @@ const Router = createBrowserRouter([
                         path: "/dashboard/uploadPdf",
                         element: <FileUpload />
                     },
+                    {
+                        path:"/dashboard/reminder",
+                        element:<Reminder/>
+                    },
+                    {
+                        path:'/dashboard/performance',
+                        element:<Performance/>
+                    }
                 ]
             }
         ]
