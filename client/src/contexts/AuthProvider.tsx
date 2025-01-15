@@ -7,7 +7,7 @@ interface User {
   password?:string,
   city?:string,
   state?:string,
-  id?:string,
+  _id?:string,
 }
 
 interface CurrentUserContextType{
