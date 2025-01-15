@@ -1,9 +1,11 @@
 import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthProvider";
-import { Link } from "react-router-dom";
 
-const Signup: React.FC = () => {
+interface SignupProps{
+    onSignupSuccess?:()=>void;
+}
+const Signup: React.FC<SignupProps> = ({onSignupSuccess}) => {
     const auth = useContext(AuthContext);
     if (!auth) {
         throw new Error("AuthContext must be used within an AuthProvider");
@@ -27,15 +29,15 @@ const Signup: React.FC = () => {
                 return;
             }
             const user = await signup({ email, password, name, city, state });
-            console.log(user);
-            navigate(`/`, { replace: true });
+            if (onSignupSuccess) onSignupSuccess();
+            navigate("/", { replace: true });
         } catch (error) {
             setError("Signup failed, please try again");
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center ">
+        <div className=" flex items-center justify-center ">
             <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 space-y-6 border border-gray-200">
                 <h1 className="text-3xl font-extrabold text-center text-gray-800">Create an Account</h1>
                 {error && <p className="text-center text-red-500">{error}</p>}

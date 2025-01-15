@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { motion } from "motion/react"
 import LoginModal from "@/scenes/Authentication/LoginModal";
 import { useState } from "react";
+import SignupModal from "@/scenes/Authentication/SignupModal";
 
 const Navbar: FC = () => {
     const auth = useContext(AuthContext);
@@ -14,6 +15,7 @@ const Navbar: FC = () => {
     const navigate = useNavigate();
     const { currUser, logout } = auth;
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSignupModalOpen,setIsSignupModalOpen]=useState(false);
 
     const navItems = [
         {
@@ -58,13 +60,14 @@ const Navbar: FC = () => {
                             <button onClick={handleLogout} className="bg-Blue text-white px-6 py-2 rounded-lg text-xl hover:bg-Blue/80 transtion-all duration-300 hover:tranistion-all duration-300 ">Logout</button>
                             :
                             <div className="flex">
-                                <button className="text-xl font-medium mr-10 px-6 py-2 transition-all duration-200 text-Blue rounded-lg hover:bg-Blue/90 hover:text-white hover:transition-all hover:duration-200 hover:ease-in-out   " >Signup</button>
+                                <button onClick={() => setIsSignupModalOpen(true)} className="text-xl font-medium mr-10 px-6 py-2 transition-all duration-200 text-Blue rounded-lg hover:bg-Blue/90 hover:text-white hover:transition-all hover:duration-200 hover:ease-in-out   " >Signup</button>
                                 <button onClick={() => setIsModalOpen(true)} className="bg-Blue text-white px-6 py-2 rounded-lg text-xl hover:bg-Blue/80 transtion-all duration-300 hover:tranistion-all duration-300 ">Login</button>
                             </div>
                     }
                 </div>
             </motion.div>
             {isModalOpen && <LoginModal onClose={() => setIsModalOpen(false)} />}
+            {isSignupModalOpen && <SignupModal onClose={()=>setIsSignupModalOpen(false)}/>}    
         </>
     )
 }
