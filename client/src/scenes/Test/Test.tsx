@@ -11,6 +11,7 @@ interface Question {
     options: string[];
     correctAnswer: string;
     explanation: string;
+    id:string;
 }
 
 interface TestState {
@@ -22,7 +23,7 @@ interface TestState {
 }
 
 const Test = () => {
-    const { testId } = useParams();
+    const { testId,userId } = useParams();
     const [questions, setQuestions] = useState<Question[]>([]);
     const [testState, setTestState] = useState<TestState>({
         isCompleted: false,
@@ -39,7 +40,7 @@ const Test = () => {
         const fetchQuestions = async () => {
             try {
                 const response = await axios.get(`http://localhost:7008/tests/${testId}`);
-                console.log(response.data.testquestions);
+                // console.log(response.data.testquestions);
                 setQuestions(response.data.testquestions);
                 setTestState(prev => ({
                     ...prev,
@@ -59,7 +60,7 @@ const Test = () => {
         setTestState(prev => {
             const newAnswers = [...prev.userAnswers];
             newAnswers[prev.currentQuestionIndex] = selectedOption;
-            console.log(newAnswers);
+            // console.log(newAnswers);
             return {
                 ...prev,
                 userAnswers: newAnswers,
@@ -84,7 +85,7 @@ const Test = () => {
         }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async() => {
         const score = testState.userAnswers.reduce((acc, answer, index) => {
             return acc + (answer === questions[index].correctAnswer ? 1 : 0);
         }, 0);
@@ -94,6 +95,19 @@ const Test = () => {
             isCompleted: true,
             score
         }));
+        const userAnswersWithIds = testState.userAnswers.map((answer, index) => ({
+            questionId: questions[index].id, 
+            userAnswer: answer,
+        }));
+        try {
+            await axios.put(`http://localhost:7008/tests/${testId}/${userId}/submit`,{
+                score,
+                userAnswers:userAnswersWithIds,
+            })
+            console.log("Test results submitted successfully!");
+        } catch (error) {
+            console.error("Failed to submit test results", error);
+        }
     };
 
     

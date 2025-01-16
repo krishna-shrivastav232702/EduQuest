@@ -198,43 +198,29 @@ export const generateTest = async (req: Request, res: Response) => {
 
 export const submitTest = async (req: Request, res: Response) => {
     try {
-        const { answers } = req.body;
+        const { userAnswers, score } = req.body;
         const { userId, testId } = req.params;
-        if (!testId || !answers) {
-            res.status(404).json({ message: "Test Id and answers are required" });
-        }
-
-        const questions = await prismaClient.question.findMany({ where: { testId } });
-
-        if (!questions || questions.length === 0) {
-            res.status(404).json({ message: "Questions not found" });
-        }
-
-        let score = 0;
-        const questionUpdates = questions.map((question) => {
-            const userAnswer = answers[question.id];
-            const isCorrect = userAnswer === question.correctAnswer;
-            if (isCorrect) score++;
-            return prismaClient.question.update({
-                where: { id: question.id },
+        try {
+            await prismaClient.testPerformance.create({
                 data: {
-                    userAnswer,
-                    status: isCorrect ? "correct" : "incorrect",
+                    userId,
+                    testId,
+                    score,
                 }
             })
-        })
 
-        await Promise.all(questionUpdates);
-
-        await prismaClient.testPerformance.create({
-            data: {
-                userId,
-                testId,
-                score,
+            for (const answer of userAnswers) {
+                await prismaClient.question.update({
+                    where: { id: answer.questionId },
+                    data: { userAnswer: answer.userAnswer },
+                });
             }
-        });
 
-        res.status(200).json({ message: "Test submitted successfully", score });
+            res.status(200).json({ message: "Test performance saved successfully!" });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Failed to save test performance" });
+        }
 
     } catch (error) {
         console.error("Error submitting test:", error);

@@ -29,9 +29,9 @@ const Router = createBrowserRouter([
                 element: <Pricing />
             },
             {
-                path: `/tests/:testId`,
+                path: `/tests/:testId/:userId`,
                 element: <Test />,
-                loader:({params})=>fetch(`http://localhost:7008/tests/${params.testId}`)
+                loader:({params})=>fetch(`http://localhost:7008/tests/${params.testId}/${params.userId}`)
 
             },
             {

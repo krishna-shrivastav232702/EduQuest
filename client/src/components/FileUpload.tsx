@@ -117,7 +117,7 @@ const FileUpload: React.FC = () => {
             const response = await axios.post('http://localhost:7008/tests/generate', { text, userId });
             const testId = response.data.testId;
             setIsLoading(false);
-            navigate(`/tests/${testId}`,{replace:true});
+            navigate(`/tests/${testId}/${userId}`,{replace:true});
             // findingTest(testid);
         } catch (error) {
             console.error("Error generating test");
