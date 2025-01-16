@@ -1,60 +1,180 @@
-import { Request,Response } from "express"
-import {GoogleGenerativeAI} from "@google/generative-ai"
-import dotenv from "dotenv"
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
+import { Request, Response } from "express";
 import { prismaClient } from "../index.js";
 
 dotenv.config();
 
 const apikey = process.env.GEMINI_API_KEY || "";
-export const generateTest = async(req:Request,res:Response)=>{
-    try {
-        const {text,userId}=req.body;
-        if(!userId){
-            res.status(404).json({message:"user id is required"});
-            return;
-        }
-        const newTest = await prismaClient.test.create({
-            data:{
-                userId,
+
+// Define expected structure
+interface ProcessedQuestion {
+    question: string;
+    options: string[];
+    answer: string;
+    explanation: string;
+}
+
+const processingQuestions = async (rawText: string | undefined): Promise<ProcessedQuestion[]> => {
+    if (!rawText) {
+        throw new Error("No text provided for processing");
+    }
+
+    // First, clean the input text
+    const cleanedText = rawText
+        .replace(/\r\n/g, '\n')  // Normalize line endings
+        .replace(/\n{3,}/g, '\n\n')  // Remove excessive newlines
+        .trim();
+
+    // Split into question blocks more reliably
+    const questionBlocks = cleanedText.split(/Question(?:\s+\d+)?:/i).filter(Boolean);
+
+    const processedQuestions = questionBlocks.map((block): ProcessedQuestion => {
+        try {
+            // Extract question text
+            // Look for text until the first option or any variation of "Option A" appears
+            const questionMatch = block.match(/^\s*(.*?)(?=\s*(?:-\s*Option\s*A:|Option\s*A[\s:-]|-\s*[A-D][.\s:-]|\n\s*-\s*|$))/is);
+            const question = questionMatch
+                ? questionMatch[1]
+                    .replace(/\*\*/g, '')
+                    .replace(/\n+/g, ' ')
+                    .trim()
+                : '';
+
+            // Extract options more robustly
+            const optionsPattern = /(?:Option\s*([A-D])[.\s:-]|\n\s*-\s*|\n\s*([A-D])[.\s:-])\s*([^\n]+)/gi;
+            const options: string[] = [];
+            let optionMatch;
+
+            while ((optionMatch = optionsPattern.exec(block)) !== null) {
+                const optionText = optionMatch[3].trim();
+                if (optionText) {
+                    options.push(optionText);
+                }
             }
-        });
-        if(!newTest){
-            res.status(500).json({message:"Internal server error while creating test"})
+
+            // If no options found with labels, try extracting lines starting with "-"
+            if (options.length === 0) {
+                const bulletOptions = block.match(/(?:\n\s*-\s*)([^\n]+)/g);
+                if (bulletOptions) {
+                    options.push(...bulletOptions.map(opt => opt.replace(/^\s*-\s*/, '').trim()));
+                }
+            }
+
+            // Extract answer
+            // Look for various formats of answer specification
+            const answerMatch = block.match(/(?:Answer\s*[:=-]\s*|Correct\s+Answer\s*[:=-]\s*)([A-D])/i);
+            let answer = answerMatch ? answerMatch[1].trim() : '';
+
+            // If no letter answer found, try to match the correct option text
+            if (!answer && options.length > 0) {
+                const correctOptionMatch = block.match(/(?:Answer\s*[:=-]\s*|Correct\s+Answer\s*[:=-]\s*)([^\n]+)/i);
+                if (correctOptionMatch) {
+                    const correctText = correctOptionMatch[1].trim();
+                    const optionIndex = options.findIndex(opt =>
+                        opt.toLowerCase().includes(correctText.toLowerCase()) ||
+                        correctText.toLowerCase().includes(opt.toLowerCase())
+                    );
+                    if (optionIndex !== -1) {
+                        const letters = ['A', 'B', 'C', 'D'];
+                        answer = letters[optionIndex];
+                    }
+                }
+            }
+
+            // Extract explanation
+            // Look for various formats of explanation specification
+            const explanationMatch = block.match(/(?:Explanation\s*[:=-]\s*|Reason\s*[:=-]\s*)([^]*?)(?=(?:\n\s*Question|$))/i);
+            const explanation = explanationMatch
+                ? explanationMatch[1]
+                    .replace(/\*\*/g, '')
+                    .replace(/\n+/g, ' ')
+                    .trim()
+                : '';
+
+            // Validate the processed question
+            if (!question || options.length === 0 || !answer) {
+                console.warn('Incomplete question block:', {
+                    hasQuestion: !!question,
+                    optionsCount: options.length,
+                    hasAnswer: !!answer,
+                    rawBlock: block
+                });
+            }
+
+            return {
+                question,
+                options: options.slice(0, 4), // Ensure we only take first 4 options
+                answer,
+                explanation
+            };
+        } catch (error) {
+            console.error('Error processing question block:', error);
+            console.error('Problematic block:', block);
+            return {
+                question: '',
+                options: [],
+                answer: '',
+                explanation: ''
+            };
         }
+    });
+
+    // Filter out invalid questions
+    return processedQuestions.filter(q =>
+        q.question &&
+        q.options.length === 4 &&
+        q.answer &&
+        ['A', 'B', 'C', 'D'].includes(q.answer)
+    );
+};
+
+// Update your generate test function to handle empty results
+export const generateTest = async (req: Request, res: Response) => {
+    try {
+        const { text, userId } = req.body;
+        if (!userId) {
+            res.status(404).json({ message: "user id is required" });
+        }
+
+        const newTest = await prismaClient.test.create({
+            data: { userId }
+        });
+
+        if (!newTest) {
+            res.status(500).json({ message: "Internal server error while creating test" });
+        }
+
         const testId = newTest.id;
-
-
-
         const genAI = new GoogleGenerativeAI(apikey);
         const model = genAI.getGenerativeModel({
-            model:"gemini-1.5-flash",
-            systemInstruction :`You are an advanced AI tutor designed to help students by generating multiple-choice questions from textbook or PDF content. Your task is to read and understand the given text and create 10 relevant and challenging multiple-choice questions, each with 4 options and an answer key in the following format:
-
-            Question:
-            - Option A
-            - Option B
-            - Option C
-            - Option D
-            Answer: [Correct Answer]
-            Explanation: [Provide a direct and concise explanation for why the correct answer is correct. Focus only on the scientific principles, definitions, or logical reasoning relevant to the answer. Do not reference the text explicitly or use phrases like "the text states," "the text defines," or "as mentioned in the text."]`
+            model: "gemini-1.5-flash",
+            systemInstruction: `You are an advanced AI tutor designed to help students by generating multiple-choice questions from textbook or PDF content. Your task is to read and understand the given text and create 10 relevant and challenging multiple-choice questions. Each question must strictly follow this format:
+        Question: [Question text here]
+        Option A: [Option text]
+        Option B: [Option text]
+        Option C: [Option text]
+        Option D: [Option text]
+        Answer: [A, B, C, or D]
+        Explanation: [Provide a direct and concise explanation for why the correct answer is correct. Focus only on the scientific principles, definitions, or logical reasoning relevant to the answer. Do not reference the text explicitly or use phrases like "the text states," "the text defines," or "as mentioned in the text."]
+        Ensure each question has exactly 4 options labeled A through D, and the answer must be one of these letters.`
         });
 
-        const inputText = `
-            Here is the content 
-            ${text}
-        `;    
+        const result = await model.generateContent(`Here is the content: ${text}`);
 
-        const result = await model.generateContent(inputText);
-        if(!result){
-            res.status(400).json({message:"Something went wrong in api response"});
+        if (!result?.response?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            await prismaClient.test.delete({ where: { id: testId } });
+            res.status(400).json({ message: "Failed to generate questions" });
         }
-        const ans = result.response.candidates?.[0].content.parts?.[0].text
-        const questions = await processingQuestions(ans);
-        if(!questions || questions.length === 0){
-            res.status(400).json({message:"No questions were generated"});
-            return;
+
+        const questions = await processingQuestions(result.response.candidates?.[0]?.content.parts[0]?.text);
+
+        if (!questions || questions.length === 0) {
+            await prismaClient.test.delete({ where: { id: testId } });
+            res.status(400).json({ message: "No valid questions were generated" });
         }
-        const createQuestions = questions.map((question) => 
+
+        const createQuestions = questions.map(question =>
             prismaClient.question.create({
                 data: {
                     questionText: question.question,
@@ -65,62 +185,41 @@ export const generateTest = async(req:Request,res:Response)=>{
                 }
             })
         );
+
         await Promise.all(createQuestions);
-        res.status(200).json({message:"test generated successfully",testId});
+        res.status(200).json({ message: "Test generated successfully", testId });
+
     } catch (error) {
         console.error("Error generating test:", error);
         res.status(500).json({ message: "Internal Server Error" });
     }
-}
-
-const processingQuestions = async(ans:string | undefined) =>{
-    const questionBlocks = ans?.split("Question:");
-    const questions =  questionBlocks?.slice(1).map((block)=>{
-        const rawquestion = block.match(/^(.*?)(?=\n- Option A)/s)?.[1]?.trim() || "";
-        const question = rawquestion
-                            .replace(/\*\*/g,"")
-                            .replace(/\n+/g," ")
-                            .trim();
-        const options = (block.match(/- (.*?)\n/g) || []).map(option => option.replace('- ',"").trim());
-        const answer = block.match(/Answer:\s*([A-D])/)?.[1]?.trim() || "";
-        const explanation = block.match(/Explanation:\s*(.*)/)?.[1]?.trim() || "";
-        return {
-            question,
-            options,
-            answer,
-            explanation,
-        };
-    });
-
-    return questions;
-}
+};
 
 
-
-export const submitTest = async(req:Request,res:Response)=>{
+export const submitTest = async (req: Request, res: Response) => {
     try {
-        const {answers} = req.body;
-        const {userId,testId}=req.params;
-        if(!testId || !answers){
-            res.status(404).json({message:"Test Id and answers are required"});
+        const { answers } = req.body;
+        const { userId, testId } = req.params;
+        if (!testId || !answers) {
+            res.status(404).json({ message: "Test Id and answers are required" });
         }
 
-        const questions = await prismaClient.question.findMany({where:{testId}});
+        const questions = await prismaClient.question.findMany({ where: { testId } });
 
-        if(!questions || questions.length === 0){
-            res.status(404).json({message:"Questions not found"});
+        if (!questions || questions.length === 0) {
+            res.status(404).json({ message: "Questions not found" });
         }
 
         let score = 0;
-        const questionUpdates = questions.map((question)=>{
+        const questionUpdates = questions.map((question) => {
             const userAnswer = answers[question.id];
             const isCorrect = userAnswer === question.correctAnswer;
-            if(isCorrect) score++;
+            if (isCorrect) score++;
             return prismaClient.question.update({
-                where:{id:question.id},
-                data:{
+                where: { id: question.id },
+                data: {
                     userAnswer,
-                    status:isCorrect ? "correct" : "incorrect",
+                    status: isCorrect ? "correct" : "incorrect",
                 }
             })
         })
@@ -128,7 +227,7 @@ export const submitTest = async(req:Request,res:Response)=>{
         await Promise.all(questionUpdates);
 
         await prismaClient.testPerformance.create({
-            data:{
+            data: {
                 userId,
                 testId,
                 score,
@@ -143,22 +242,22 @@ export const submitTest = async(req:Request,res:Response)=>{
     }
 }
 
-export const testResult = async(req:Request,res:Response)=>{
+export const testResult = async (req: Request, res: Response) => {
     try {
-        const {testId}=req.params;
-        if(!testId){
-            res.status(400).json({message:"Test id is required"});
+        const { testId } = req.params;
+        if (!testId) {
+            res.status(400).json({ message: "Test id is required" });
         }
         const test = await prismaClient.test.findUnique({
-            where:{id:testId},
-            include:{
-                questions:true,
-                testPerformance:true,
+            where: { id: testId },
+            include: {
+                questions: true,
+                testPerformance: true,
             }
         })
         if (!test) {
             res.status(404).json({ message: "Test not found" });
-    
+
         }
         res.status(200).json({ message: "Test result fetched", test });
     } catch (error) {
@@ -167,19 +266,19 @@ export const testResult = async(req:Request,res:Response)=>{
     }
 }
 
-export const findTestQuestions = async(req:Request,res:Response)=>{
-    const {testId}=req.params;
+export const findTestQuestions = async (req: Request, res: Response) => {
+    const { testId } = req.params;
     try {
-        if(!testId){
-            res.status(400).json({message:"Test id is required"});
+        if (!testId) {
+            res.status(400).json({ message: "Test id is required" });
         }
-        const testquestions = await prismaClient.question.findMany({where: {testId:testId}});
-        if(!testquestions){
-            res.status(404).json({message:"Test not found"})
+        const testquestions = await prismaClient.question.findMany({ where: { testId: testId } });
+        if (!testquestions) {
+            res.status(404).json({ message: "Test not found" })
         }
-        res.status(200).json({testquestions});
+        res.status(200).json({ testquestions });
     } catch (error) {
         console.error("Internal server error");
-        res.status(500).json({message:"Internal Server Error"});
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }

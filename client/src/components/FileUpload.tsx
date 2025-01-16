@@ -1,6 +1,7 @@
 import { useContext, useState } from "react";
 import axios from "axios";
 import { AuthContext } from "@/contexts/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 interface FileData {
     userId: string;
@@ -10,12 +11,6 @@ interface FileData {
     fileSize: number;
 }
 
-interface Question {
-    questionText: string;
-    options: string[];
-    correctAnswer: string;
-    explanation: string;
-}
 
 
 interface PresignedUrlResponse {
@@ -25,18 +20,19 @@ interface PresignedUrlResponse {
 
 
 const FileUpload: React.FC = () => {
-    const [textExtractionCompleted,setTextExtractionCompleted]=useState(false);
+    const [textExtractionCompleted, setTextExtractionCompleted] = useState(false);
     const auth = useContext(AuthContext);
     if (!auth) {
         throw new Error("Authprovider must be valid");
     }
     const { currUser } = auth;
+    const navigate = useNavigate();
 
     const [file, setFile] = useState<File | null>(null);
     const [chapter, setChapter] = useState<string>("");
     const [extractedText, setExtractedText] = useState<string>("");
-    const [testId, setTestId] = useState<string | null>(null);
-    const [questions, setQuestions] = useState<Question[]>([]);
+    const [isLoading,setIsLoading]=useState(false);
+    // const [questions, setQuestions] = useState<Question[]>([]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -54,8 +50,7 @@ const FileUpload: React.FC = () => {
             return;
         }
         try {
-            console.log("entered");
-            console.log(currUser?.id);
+            setIsLoading(true);
             const filename = file.name;
             const contentType = file.type;
             const fileSizeInKb = file.size / 1024;
@@ -81,7 +76,7 @@ const FileUpload: React.FC = () => {
                     "Content-Type": file.type,
                 }
             });
-            alert("file Uploaded Successfully");
+            // alert("file Uploaded Successfully");
         } catch (error) {
             console.log("Error uploading file to s3", error);
             alert("Error uploading file");
@@ -100,6 +95,7 @@ const FileUpload: React.FC = () => {
             });
             const text = extractionResponse.data.section_text;
             setExtractedText(text);
+            setIsLoading(false);
             setTextExtractionCompleted(true);
         } catch (error) {
             console.error("error extracting text:", error);
@@ -119,119 +115,141 @@ const FileUpload: React.FC = () => {
     const sendingTextToGeminiToGenerateTest = async (text: string, userId: string) => {
         try {
             const response = await axios.post('http://localhost:7008/tests/generate', { text, userId });
-            console.log(response.data);
-            setTestId(response.data.testId); //this will give testId
+            const testId = response.data.testId;
+            setIsLoading(false);
+            navigate(`/tests/${testId}`,{replace:true});
+            // findingTest(testid);
         } catch (error) {
             console.error("Error generating test");
         }
     }
 
-    const findingTest = async (testId: string) => {
-        try {
-            const response = await axios.get(`http://localhost:7008/tests/${testId}`);
-            console.log("questions:", response.data);
-            setQuestions(response.data.testquestions);
-        } catch (error) {
-            console.error("error finding test");
-        }
-    }
+    // const findingTest = async (testId: string) => {
+    //     try {
+    //         const response = await axios.get(`http://localhost:7008/tests/${testId}`);
+    //         console.log("questions:", response.data);
+    //         setQuestions(response.data.testquestions);
+    //     } catch (error) {
+    //         console.error("error finding test");
+    //     }
+    // }
 
     const handleGenerateTest = async () => {
         if (extractedText && chapter) {
-            const userId:string = currUser?.id!;
+            const userId: string = currUser?.id!;
+            setIsLoading(true);
             await sendingTextToGeminiToGenerateTest(extractedText, userId);
         }
     }
 
-    const handleFetchTest = async () => {
-        if (testId) {
-            await findingTest(testId);
-        }
-    };
+
+    if (isLoading) {
+        return (
+            <div className="flex mt-[300px] justify-center w-full ">
+                <div className="animate-spin h-16 w-16 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+            </div>
+        );
+    }
 
     return (
-         <div className="p-4 max-w-2xl mx-auto">
-        <div className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Upload PDF
-                </label>
-                <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    className="w-full border rounded p-2"
-                />
-            </div>
-
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Chapter Number
-                </label>
-                <input
-                    type="text"
-                    value={chapter}
-                    onChange={handleChapterChange}
-                    placeholder="Enter chapter number (e.g: Ten,Nine)"
-                    className="w-full border rounded p-2"
-                />
-            </div>
-
-            <button
-                onClick={handleGenerateTest}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mt-4"
-                disabled={!textExtractionCompleted}
-            >
-                Generate Test
-            </button>
-            <button
-                onClick={handleFetchTest}
-                className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 mt-4"
-                disabled={!testId}
-            >
-                Fetch Test
-            </button>
-
-            <button
-                onClick={handleUploadClick}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-            >
-                Upload and Extract
-            </button>
-
-            {/* Conditionally show download PDF button */}
-            {textExtractionCompleted && (
-                <a
-                    href="link-to-download.pdf"
-                    className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mt-4"
-                    download
-                >
-                    Download PDF
-                </a>
-            )}
-
-            {/* Conditionally render generated questions */}
-            {questions.length > 0 && (
-                <div className="mt-4">
-                    <h3 className="font-medium mb-2">Generated Questions:</h3>
-                    <div className="border p-4 rounded bg-gray-50">
-                        {questions.map((q, index) => (
-                            <div key={index} className="mb-4">
-                                <p className="font-semibold">{q.questionText}</p>
-                                <ul>
-                                    {q.options.map((option, idx) => (
-                                        <li key={idx}>{option}</li>
-                                    ))}
-                                </ul>
-                                <p className="text-sm text-gray-500">Correct Answer: {q.correctAnswer}</p>
-                                <p className="text-sm text-gray-500">Explanation: {q.explanation}</p>
-                            </div>
-                        ))}
+        <div className="flex  justify-center w-full">
+            <div className=" mt-[250px]">
+                <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
+                    PDF Test Generator
+                </h1>
+                <div className="space-y-6">
+                    {/* Upload PDF Section */}
+                    <div>
+                        <label className="block text-lg font-semibold text-gray-700 mb-3">
+                            Upload Your PDF
+                        </label>
+                        <input
+                            type="file"
+                            accept=".pdf"
+                            onChange={handleFileChange}
+                            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
                     </div>
+
+                    {/* Chapter Number Input */}
+                    <div>
+                        <label className="block text-lg font-semibold text-gray-700 mb-3">
+                            Chapter Number
+                        </label>
+                        <input
+                            type="text"
+                            value={chapter}
+                            onChange={handleChapterChange}
+                            placeholder="Enter chapter number (e.g., Ten, Nine)"
+                            className="block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+
+                    {/* Upload and Extract Button */}
+                    <button
+                        onClick={handleUploadClick}
+                        className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium text-lg shadow hover:bg-blue-700 focus:ring focus:ring-blue-300 focus:ring-opacity-50 disabled:bg-gray-400"
+                    >
+                        Upload and Extract
+                    </button>
+
+                    {/* Conditionally show Generate Test and Download PDF Buttons */}
+                    {textExtractionCompleted && (
+                        <div className="flex gap-6 justify-center mt-6">
+                            <button
+                                onClick={handleGenerateTest}
+                                className="bg-green-600 text-white py-3 px-6 rounded-lg font-medium text-lg shadow hover:bg-green-700 focus:ring focus:ring-green-300 focus:ring-opacity-50"
+                                disabled={!textExtractionCompleted}
+                            >
+                                Generate Test
+                            </button>
+                            <a
+                                href="link-to-download.pdf"
+                                className="bg-gray-600 text-white py-3 px-6 rounded-lg font-medium text-lg shadow hover:bg-gray-700 focus:ring focus:ring-gray-300 focus:ring-opacity-50"
+                                download
+                            >
+                                Download PDF
+                            </a>
+                        </div>
+                    )}
+
+                    {/* Conditionally Render Generated Questions */}
+                    {/* {questions.length > 0 && (
+                        <div className="mt-8">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                                Generated Questions
+                            </h2>
+                            <div className="space-y-6">
+                                {questions.map((q, index) => (
+                                    <div
+                                        key={index}
+                                        className="p-6 bg-gray-50 border border-gray-300 rounded-lg shadow"
+                                    >
+                                        <p className="text-lg font-semibold text-gray-800 mb-2">
+                                            {q.questionText}
+                                        </p>
+                                        <ul className="list-disc pl-6 space-y-1">
+                                            {q.options.map((option, idx) => (
+                                                <li key={idx} className="text-gray-700">
+                                                    {option}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <p className="text-sm text-gray-600 mt-3">
+                                            <strong>Correct Answer:</strong> {q.correctAnswer}
+                                        </p>
+                                        <p className="text-sm text-gray-600">
+                                            <strong>Explanation:</strong> {q.explanation}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )} */}
                 </div>
-            )}
+            </div>
         </div>
-    </div>
+
     )
 }
 
