@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes.js"
 import testRoutes from "./routes/test.routes.js"
 import pdfRoutes from "./routes/upload.route.js";
 import reminderRoutes from "./routes/reminder.routes.js"
+import dashboardRoutes from "./routes/dashboard.routes.js"
 import morgan from "morgan"
 import { Express } from "express"
 import { PrismaClient } from "@prisma/client"
@@ -33,6 +34,7 @@ app.use("/auth",authRoutes);
 app.use("/tests",testRoutes);
 app.use("/pdf",pdfRoutes);
 app.use("/reminder",reminderRoutes);
+app.use("/dashboard",dashboardRoutes);
 
 app.listen(port, ()=> {
     console.log(`App is listening at port: ${port} and in ${envMode} mode`);

@@ -32,7 +32,6 @@ const FileUpload: React.FC = () => {
     const [chapter, setChapter] = useState<string>("");
     const [extractedText, setExtractedText] = useState<string>("");
     const [isLoading,setIsLoading]=useState(false);
-    // const [questions, setQuestions] = useState<Question[]>([]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -103,36 +102,17 @@ const FileUpload: React.FC = () => {
         }
     }
 
-    // const sendingTextToGeminiToGeneratePdf = async(text:string)=>{
-    //     try {
-    //         const response = await axios.post('http://localhost:7008/pdf/gemini',{text});
-    //         console.log(response.data.result.response.candidates[0].content.parts[0].text);
-    //     } catch (error) {
-    //         console.error("error from the gemini model");
-    //     }
-    // }
-
     const sendingTextToGeminiToGenerateTest = async (text: string, userId: string) => {
         try {
             const response = await axios.post('http://localhost:7008/tests/generate', { text, userId });
             const testId = response.data.testId;
             setIsLoading(false);
             navigate(`/tests/${testId}/${userId}`,{replace:true});
-            // findingTest(testid);
         } catch (error) {
             console.error("Error generating test");
         }
     }
 
-    // const findingTest = async (testId: string) => {
-    //     try {
-    //         const response = await axios.get(`http://localhost:7008/tests/${testId}`);
-    //         console.log("questions:", response.data);
-    //         setQuestions(response.data.testquestions);
-    //     } catch (error) {
-    //         console.error("error finding test");
-    //     }
-    // }
 
     const handleGenerateTest = async () => {
         if (extractedText && chapter) {
@@ -171,7 +151,6 @@ const FileUpload: React.FC = () => {
                         />
                     </div>
 
-                    {/* Chapter Number Input */}
                     <div>
                         <label className="block text-lg font-semibold text-gray-700 mb-3">
                             Chapter Number
@@ -185,15 +164,13 @@ const FileUpload: React.FC = () => {
                         />
                     </div>
 
-                    {/* Upload and Extract Button */}
                     <button
                         onClick={handleUploadClick}
-                        className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium text-lg shadow hover:bg-blue-700 focus:ring focus:ring-blue-300 focus:ring-opacity-50 disabled:bg-gray-400"
+                        className="w-full bg-Blue text-white py-3 px-6 rounded-lg font-medium text-lg shadow hover:bg-Blue/80 focus:ring focus:ring-blue-300 focus:ring-opacity-50 disabled:bg-gray-400"
                     >
-                        Upload and Extract
+                        Upload File
                     </button>
 
-                    {/* Conditionally show Generate Test and Download PDF Buttons */}
                     {textExtractionCompleted && (
                         <div className="flex gap-6 justify-center mt-6">
                             <button
@@ -203,49 +180,9 @@ const FileUpload: React.FC = () => {
                             >
                                 Generate Test
                             </button>
-                            <a
-                                href="link-to-download.pdf"
-                                className="bg-gray-600 text-white py-3 px-6 rounded-lg font-medium text-lg shadow hover:bg-gray-700 focus:ring focus:ring-gray-300 focus:ring-opacity-50"
-                                download
-                            >
-                                Download PDF
-                            </a>
                         </div>
                     )}
 
-                    {/* Conditionally Render Generated Questions */}
-                    {/* {questions.length > 0 && (
-                        <div className="mt-8">
-                            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-                                Generated Questions
-                            </h2>
-                            <div className="space-y-6">
-                                {questions.map((q, index) => (
-                                    <div
-                                        key={index}
-                                        className="p-6 bg-gray-50 border border-gray-300 rounded-lg shadow"
-                                    >
-                                        <p className="text-lg font-semibold text-gray-800 mb-2">
-                                            {q.questionText}
-                                        </p>
-                                        <ul className="list-disc pl-6 space-y-1">
-                                            {q.options.map((option, idx) => (
-                                                <li key={idx} className="text-gray-700">
-                                                    {option}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        <p className="text-sm text-gray-600 mt-3">
-                                            <strong>Correct Answer:</strong> {q.correctAnswer}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            <strong>Explanation:</strong> {q.explanation}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )} */}
                 </div>
             </div>
         </div>
