@@ -6,13 +6,20 @@ cron.schedule("* * * * *",async()=>{
     try {
         console.log("cron job triggered");
         const now = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(now.getDate()+1)
+        
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
+        
+        const endOfTomorrow = new Date(now);
+        endOfTomorrow.setDate(now.getDate() + 1);
+        endOfTomorrow.setHours(23, 59, 59, 999);
+        
+        console.log(`Checking for reminders between ${startOfToday.toISOString()} and ${endOfTomorrow.toISOString()}`);
         const reminders = await prismaClient.reminder.findMany({
             where:{
                 testDate:{
-                    gte:now,
-                    lte:tomorrow,
+                    gte:startOfToday,
+                    lte:endOfTomorrow,
                 },
                 emailSent:false,
             },

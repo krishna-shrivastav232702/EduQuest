@@ -7,7 +7,7 @@ export const createReminder = async(req:Request,res:Response)=>{
 
     try{
         const reminderDate = new Date(testDate);
-        reminderDate.setDate(reminderDate.getDate()-1);
+        reminderDate.setDate(reminderDate.getDate());
 
         const reminder = await prismaClient.reminder.create({
             data:{
