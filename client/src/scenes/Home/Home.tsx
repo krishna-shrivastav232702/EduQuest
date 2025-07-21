@@ -81,7 +81,7 @@ const Home = () => {
                     Simplify your study process with AI-generated tests and smart reminders.
                 </p>
                 <div className="mt-6 flex justify-center space-x-4 mt-10">
-                    <Link to="/test">
+                    <Link to="/dashboard/uploadPdf">
                         <button className="bg-Blue text-white px-6 py-3 rounded-lg text-xl hover:bg-Blue/80 transtion-all duration-300 hover:tranistion-all duration-300 ">
                             Generate a Test
                         </button>

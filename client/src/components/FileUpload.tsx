@@ -26,12 +26,13 @@ const FileUpload: React.FC = () => {
         throw new Error("Authprovider must be valid");
     }
     const { currUser } = auth;
+    console.log(currUser);
     const navigate = useNavigate();
 
     const [file, setFile] = useState<File | null>(null);
     const [chapter, setChapter] = useState<string>("");
     const [extractedText, setExtractedText] = useState<string>("");
-    const [isLoading,setIsLoading]=useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -82,32 +83,44 @@ const FileUpload: React.FC = () => {
         }
     }
 
+    // Add better error handling in extractTextFromFile
     const extractTextFromFile = async (UploadedFile: FileData) => {
         const { s3Key } = UploadedFile;
         try {
             const signedUrlResponse = await axios.post('http://localhost:7008/pdf/getSignedUrlForGetObj', { s3Key });
             const signedUrl = signedUrlResponse.data.url;
+
             const extractionResponse = await axios.post('http://localhost:5000/extract-text', {
                 pdf_url: signedUrl,
                 section_type: "Chapter",
-                section_number: chapter  //it should be Ten not 10
+                section_number: chapter
             });
-            const text = extractionResponse.data.section_text;
-            setExtractedText(text);
+            console.log(extractionResponse);
+
+            if (extractionResponse.data.status === 'success') {
+                const text = extractionResponse.data.section_text;
+                setExtractedText(text);
+                setIsLoading(false);
+                setTextExtractionCompleted(true);
+                console.log(`Extracted ${extractionResponse.data.text_length} characters`);
+            } else {
+                throw new Error(extractionResponse.data.message);
+            }
+
+        } catch (error: any) {
+            console.error("Error extracting text:", error);
             setIsLoading(false);
-            setTextExtractionCompleted(true);
-        } catch (error) {
-            console.error("error extracting text:", error);
-            throw new Error("Failed to extract text from PDF");
+            alert(`Failed to extract text: ${error.response?.data?.message || error.message}`);
         }
     }
+
 
     const sendingTextToGeminiToGenerateTest = async (text: string, userId: string) => {
         try {
             const response = await axios.post('http://localhost:7008/tests/generate', { text, userId });
             const testId = response.data.testId;
             setIsLoading(false);
-            navigate(`/tests/${testId}/${userId}`,{replace:true});
+            navigate(`/tests/${testId}/${userId}`, { replace: true });
         } catch (error) {
             console.error("Error generating test");
         }

@@ -25,7 +25,7 @@ const Login: FC<LoginProps> = ({onLoginSuccess}) => {
             if (!email || !password) {
                 setError("All fields are required");
             }
-            const user = await login({ email, password });
+            await login({ email, password });
             if (onLoginSuccess) onLoginSuccess();
             navigate("/", { replace: true });
         } catch (error) {

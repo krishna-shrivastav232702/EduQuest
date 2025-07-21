@@ -10,6 +10,10 @@ dotenv.config();
 export const generatePreSignedUrl = async(req:Request,res:Response):Promise<void>=>{
     try {
         const {filename,contentType,userId,fileSize} = req.body;
+        console.log("filename",filename);
+        console.log("contentType",contentType);
+        console.log("userId",userId);
+        console.log("fileSize",fileSize);
         if(!filename || !contentType || !userId || !fileSize){
             res.status(400).json({error:"missing required fields"});
             return;
